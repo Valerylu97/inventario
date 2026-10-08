@@ -1,0 +1,48 @@
+name: app_inventario
+description: "Sistema de inventario para control de stock de panadería."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Iconos modernos de iOS
+  cupertino_icons: ^1.0.6
+  flutter_riverpod: ^2.4.9
+  shared_preferences: ^2.2.2
+
+  # Gestión de estado (Para que los datos se actualicen en todas las pantallas)
+  provider: ^6.1.1
+  # Para poder subir imagenes desde la camara o galeria
+  image_picker: ^1.0.7
+  path_provider: ^2.1.2
+
+  # Tipografía profesional (Para el diseño de Xavier)
+  google_fonts: ^6.2.1
+
+  # Base de datos local (Para persistir los datos de los panes)
+  sqflite: ^2.3.0
+  path: ^1.9.0
+  go_router: ^13.2.0   # ← semana 3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+
+  # Reglas de código limpio
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon.png"
