@@ -1,4 +1,7 @@
 import 'package:go_router/go_router.dart';
+import 'package:flutter/material.dart';
+import 'package:app_inventario/screens/login_screen.dart';
+import 'package:app_inventario/screens/gestion_usuarios_screen.dart';
 import 'package:app_inventario/screens/home_screen.dart';
 import 'package:app_inventario/screens/inventario_screen.dart';
 import 'package:app_inventario/screens/add_product_screen.dart';
@@ -10,10 +13,20 @@ import 'package:app_inventario/screens/reporte_ventas_screen.dart';
 import 'package:app_inventario/models/producto.dart';
 
 final appRouter = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/login',
   routes: [
     GoRoute(
-      path: '/',
+      path: '/login',
+      name: 'login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/usuarios',
+      name: 'usuarios',
+      builder: (context, state) => const GestionUsuariosScreen(),
+    ),
+    GoRoute(
+      path: '/home',
       name: 'home',
       builder: (context, state) => const HomeScreen(),
     ),

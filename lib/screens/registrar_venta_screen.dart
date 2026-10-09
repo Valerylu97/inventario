@@ -360,70 +360,139 @@ class _RegistrarVentaScreenState extends State<RegistrarVentaScreen> {
     return Drawer(
       backgroundColor: const Color(0xFF0A0A0A),
       child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text(
-                _nombreLocal,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+        child: FutureBuilder<SharedPreferences>(
+          future: SharedPreferences.getInstance(),
+          builder: (context, snapshot) {
+            final prefs = snapshot.data;
+            final userRole = prefs?.getString('user_role') ?? 'Operador';
+            final userName = prefs?.getString('user_name') ?? 'Usuario';
+            final esAdmin = userRole.toLowerCase().contains('admin');
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── ENCABEZADO CON ROL DE USUARIO ───
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _nombreLocal,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Usuario: $userName ($userRole)',
+                        style: const TextStyle(
+                          color: Color(0xFF5AE6DF),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-            const Divider(color: Colors.white10),
-            _menuItem(
-              icon: Icons.inventory_2_outlined,
-              label: 'Inventario',
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/inventario');
-              },
-            ),
-            _menuItem(
-              icon: Icons.add_box_outlined,
-              label: 'Registro de productos',
-              onTap: () async {
-                Navigator.pop(context);
-                await context.push('/agregar');
-                setState(() {});
-              },
-            ),
-            _menuItem(
-              icon: Icons.point_of_sale,
-              label: 'Registro de ventas',
-              onTap: () => Navigator.pop(context),
-            ),
-            _menuItem(
-              icon: Icons.bar_chart,
-              label: 'Reporte de ventas',
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/ventas/reporte');
-              },
-            ),
-            _menuItem(
-              icon: Icons.receipt_long,
-              label: 'Movimientos Kardex',
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/kardex-selector');
-              },
-            ),
-            const Divider(color: Colors.white10),
-            _menuItem(
-              icon: Icons.settings_outlined,
-              label: 'Configuración',
-              onTap: () async {
-                Navigator.pop(context);
-                await context.push('/configuracion');
-                _cargarPreferencias();
-              },
-            ),
-          ],
+                const Divider(color: Colors.white10),
+
+                // ── OPCIONES COMUNES (Cajero / Operador / Admin) ───
+                _menuItem(
+                  icon: Icons.inventory_2_outlined,
+                  label: 'Inventario',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/inventario');
+                  },
+                ),
+                _menuItem(
+                  icon: Icons.point_of_sale,
+                  label: 'Registro de ventas',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/ventas/registrar');
+                  },
+                ),
+
+                // ── OPCIONES EXCLUSIVAS DEL ADMINISTRADOR ───
+                if (esAdmin) ...[
+                  _menuItem(
+                    icon: Icons.add_box_outlined,
+                    label: 'Registro de productos',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await context.push('/agregar');
+                      setState(() {});
+                    },
+                  ),
+                  _menuItem(
+                    icon: Icons.bar_chart,
+                    label: 'Reporte de ventas',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/ventas/reporte');
+                    },
+                  ),
+                  _menuItem(
+                    icon: Icons.receipt_long,
+                    label: 'Movimientos Kardex',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/kardex-selector');
+                    },
+                  ),
+                  const Divider(color: Colors.white10),
+                  _menuItem(
+                    icon: Icons.manage_accounts_outlined,
+                    label: 'Gestión de Usuarios y Roles',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push('/usuarios');
+                    },
+                  ),
+                  _menuItem(
+                    icon: Icons.settings_outlined,
+                    label: 'Configuración',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await context.push('/configuracion');
+                      _cargarPreferencias();
+                    },
+                  ),
+                ],
+
+                // ── ESPACIADOR PARA EMPUJAR EL BOTÓN AL FINAL ───
+                const Spacer(),
+                const Divider(color: Colors.white10),
+
+                // ── BOTÓN DE CERRAR SESIÓN ───
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.redAccent),
+                  title: const Text(
+                    'Cerrar Sesión',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onTap: () async {
+                    final p = await SharedPreferences.getInstance();
+                    await p.setBool('is_logged_in', false);
+                    await p.remove('user_role');
+                    await p.remove('user_name');
+
+                    if (context.mounted) {
+                      Navigator.pop(context); // Cierra el Drawer
+                      context.go('/login'); // Redirige al Login
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
+              ],
+            );
+          },
         ),
       ),
     );

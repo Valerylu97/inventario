@@ -8,6 +8,39 @@ export 'package:app_inventario/models/producto.dart'; // Para que el main vea a 
 export 'package:app_inventario/models/movimiento_kardex.dart';
 export 'package:app_inventario/models/venta.dart';
 
+// ───────────────────────── MODELO DE USUARIO ─────────────────────────
+class User {
+  final int? id;
+  final String username;
+  final String password;
+  final String role; // Ej: 'Administrador', 'Operador', 'Cajero', etc.
+
+  User({
+    this.id,
+    required this.username,
+    required this.password,
+    required this.role,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'username': username,
+      'password': password,
+      'role': role,
+    };
+  }
+
+  factory User.fromMap(Map<String, dynamic> map) {
+    return User(
+      id: map['id'] as int?,
+      username: map['username'] as String,
+      password: map['password'] as String,
+      role: map['role'] as String,
+    );
+  }
+}
+
 class DbHelper {
   static final DbHelper instance = DbHelper._init();
   static Database? _database;
@@ -24,9 +57,10 @@ class DbHelper {
     final path = join(dbPath, filePath);
     // version 2: tabla 'kardex' (historial de entradas/salidas/ajustes).
     // version 3: tabla 'ventas' (registro de ventas, ligado al Kardex).
+    // version 4: tabla 'usuarios' (login de admin y gestión de roles).
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -45,6 +79,7 @@ class DbHelper {
     ''');
     await _createKardexTable(db);
     await _createVentasTable(db);
+    await _createUsuariosTable(db);
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -53,6 +88,9 @@ class DbHelper {
     }
     if (oldVersion < 3) {
       await _createVentasTable(db);
+    }
+    if (oldVersion < 4) {
+      await _createUsuariosTable(db);
     }
   }
 
@@ -87,7 +125,60 @@ class DbHelper {
     ''');
   }
 
-  // ───────────────────────── PRODUCTOS (CRUD existente) ─────────────────
+  Future _createUsuariosTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL
+      )
+    ''');
+
+    // Insertar el Administrador inicial por defecto
+    await db.insert('usuarios', {
+      'username': 'admin',
+      'password': 'admin123',
+      'role': 'Administrador',
+    });
+  }
+
+  // ───────────────────────── USUARIOS & ROLES ────────────────────────────
+
+  /// Autentica un usuario contra la base de datos local SQLite.
+  Future<User?> autenticar(String username, String password) async {
+    final db = await instance.database;
+    final maps = await db.query(
+      'usuarios',
+      where: 'username = ? AND password = ?',
+      whereArgs: [username, password],
+    );
+    if (maps.isNotEmpty) {
+      return User.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  /// Crea un nuevo usuario asignándole un rol personalizado.
+  Future<int> crearUsuario(User usuario) async {
+    final db = await instance.database;
+    return await db.insert('usuarios', usuario.toMap());
+  }
+
+  /// Lista todos los usuarios registrados.
+  Future<List<User>> getUsuarios() async {
+    final db = await instance.database;
+    final maps = await db.query('usuarios', orderBy: 'username ASC');
+    return maps.map((m) => User.fromMap(m)).toList();
+  }
+
+  /// Elimina un usuario por su ID.
+  Future<int> eliminarUsuario(int id) async {
+    final db = await instance.database;
+    return await db.delete('usuarios', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ───────────────────────── PRODUCTOS (CRUD) ────────────────────────────
 
   // HU01 & HU03: Guardar y Editar
   Future<int> upsert(Product p) async {
@@ -109,18 +200,10 @@ class DbHelper {
     return res.map((e) => Product.fromMap(e)).toList();
   }
 
-  // ───────────────────────── KARDEX (nuevo) ──────────────────────────────
+  // ───────────────────────── KARDEX ──────────────────────────────────────
 
   /// Registra un movimiento de inventario (ENTRADA, SALIDA o AJUSTE) y
-  /// actualiza el stock del producto en una sola transacción, de modo que
-  /// el stock mostrado y el historial de movimientos nunca queden
-  /// desincronizados.
-  ///
-  /// - ENTRADA: [cantidad] se SUMA al stock actual (ej: compra a proveedor).
-  /// - SALIDA: [cantidad] se RESTA del stock actual (ej: venta). Lanza
-  ///   [Exception] si el stock resultante sería negativo.
-  /// - AJUSTE: [cantidad] reemplaza el stock actual (ej: conteo físico de
-  ///   inventario que corrige una descuadre).
+  /// actualiza el stock del producto en una sola transacción.
   Future<Product> registrarMovimiento({
     required Product producto,
     required String tipo,
@@ -179,13 +262,11 @@ class DbHelper {
     return res.map((e) => MovimientoKardex.fromMap(e)).toList();
   }
 
-  // ───────────────────────── VENTAS (nuevo) ──────────────────────────────
+  // ───────────────────────── VENTAS ──────────────────────────────────────
 
   /// Registra una venta de [cantidad] unidades de [producto]: descuenta el
-  /// stock, inserta el movimiento SALIDA correspondiente en el Kardex
-  /// (motivo "Venta") y guarda el registro de la venta — todo dentro de la
-  /// misma transacción atómica, para que inventario, Kardex y reporte de
-  /// ventas nunca queden desincronizados entre sí.
+  /// stock, inserta el movimiento SALIDA correspondiente en el Kardex y
+  /// guarda el registro de la venta dentro de una transacción atómica.
   Future<Product> registrarVenta({
     required Product producto,
     required int cantidad,
@@ -202,6 +283,7 @@ class DbHelper {
     final stockAnterior = producto.stock;
     final stockNuevo = stockAnterior - cantidad;
     final total = producto.price * cantidad;
+
     final fecha = DateTime.now();
 
     await db.transaction((txn) async {
