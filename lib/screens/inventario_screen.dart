@@ -111,6 +111,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
+      drawer: _buildMenu(),
       appBar: AppBar(
         title: Text(
           _nombreLocal,
@@ -152,6 +153,89 @@ class _InventarioScreenState extends State<InventarioScreen> {
             style: TextStyle(
                 color: Colors.white, fontWeight: FontWeight.bold)),
       ),
+    );
+  }
+
+  // ── MENÚ GENERAL (organiza las 4 pantallas principales) ───
+  Widget _buildMenu() {
+    return Drawer(
+      backgroundColor: const Color(0xFF0A0A0A),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(_nombreLocal,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+            ),
+            const Divider(color: Colors.white10),
+            _menuItem(
+              icon: Icons.inventory_2_outlined,
+              label: 'Inventario',
+              onTap: () => Navigator.pop(context),
+            ),
+            _menuItem(
+              icon: Icons.add_box_outlined,
+              label: 'Registro de productos',
+              onTap: () async {
+                Navigator.pop(context);
+                await context.push('/agregar');
+                setState(() {});
+              },
+            ),
+            _menuItem(
+              icon: Icons.point_of_sale,
+              label: 'Registro de ventas',
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/ventas/registrar');
+              },
+            ),
+            _menuItem(
+              icon: Icons.bar_chart,
+              label: 'Reporte de ventas',
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/ventas/reporte');
+              },
+            ),
+            _menuItem(
+              icon: Icons.receipt_long,
+              label: 'Movimientos Kardex',
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/kardex-selector');
+              },
+            ),
+            const Divider(color: Colors.white10),
+            _menuItem(
+              icon: Icons.settings_outlined,
+              label: 'Configuración',
+              onTap: () async {
+                Navigator.pop(context);
+                await context.push('/configuracion');
+                _cargarPreferencias();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _menuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFF5AE6DF)),
+      title: Text(label, style: const TextStyle(color: Colors.white)),
+      onTap: onTap,
     );
   }
 

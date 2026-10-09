@@ -28,7 +28,7 @@ class PanaderiaApp extends StatelessWidget {
           filled: true,
           fillColor: Color(0xFF121212),
           border:
-          OutlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
+              OutlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
           labelStyle: TextStyle(color: Colors.grey),
         ),
       ),

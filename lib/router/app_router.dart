@@ -3,6 +3,9 @@ import 'package:app_inventario/screens/inventario_screen.dart';
 import 'package:app_inventario/screens/add_product_screen.dart';
 import 'package:app_inventario/screens/settings_page.dart';
 import 'package:app_inventario/screens/kardex_screen.dart';
+import 'package:app_inventario/screens/seleccionar_producto_kardex_screen.dart';
+import 'package:app_inventario/screens/registrar_venta_screen.dart';
+import 'package:app_inventario/screens/reporte_ventas_screen.dart';
 import 'package:app_inventario/models/producto.dart';
 
 final appRouter = GoRouter(
@@ -34,6 +37,21 @@ final appRouter = GoRouter(
         final producto = state.extra as Product;
         return KardexScreen(producto: producto);
       },
+    ),
+    GoRoute(
+      path: '/kardex-selector',
+      name: 'kardex-selector',
+      builder: (context, state) => const SeleccionarProductoKardexScreen(),
+    ),
+    GoRoute(
+      path: '/ventas/registrar',
+      name: 'registrar-venta',
+      builder: (context, state) => const RegistrarVentaScreen(),
+    ),
+    GoRoute(
+      path: '/ventas/reporte',
+      name: 'reporte-ventas',
+      builder: (context, state) => const ReporteVentasScreen(),
     ),
   ],
 );
