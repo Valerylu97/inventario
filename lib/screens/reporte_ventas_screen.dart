@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app_inventario/services/database_helper.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Reporte de ventas: resumen de ingresos totales, unidades vendidas y
 /// número de transacciones, seguido del historial completo de ventas.
@@ -13,11 +15,20 @@ class ReporteVentasScreen extends StatefulWidget {
 class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
   late Future<List<Venta>> _futureVentas;
   late Future<Map<String, num>> _futureResumen;
+  String _nombreLocal = 'APP INVENTARIO';
 
   @override
   void initState() {
     super.initState();
+    _cargarPreferencias();
     _cargar();
+  }
+
+  Future<void> _cargarPreferencias() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _nombreLocal = prefs.getString('nombre_negocio') ?? 'APP INVENTARIO';
+    });
   }
 
   void _cargar() {
@@ -29,6 +40,7 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
+      drawer: _buildMenu(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -39,6 +51,10 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.grey),
             onPressed: () => setState(_cargar),
+          ),
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.grey),
+            onPressed: () => context.pop(),
           ),
         ],
       ),
@@ -52,6 +68,92 @@ class _ReporteVentasScreenState extends State<ReporteVentasScreen> {
           Expanded(child: _buildHistorial()),
         ],
       ),
+    );
+  }
+
+  // ── MENÚ GENERAL ──────────────────────────────────────────
+  Widget _buildMenu() {
+    return Drawer(
+      backgroundColor: const Color(0xFF0A0A0A),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                _nombreLocal,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Divider(color: Colors.white10),
+            _menuItem(
+              icon: Icons.inventory_2_outlined,
+              label: 'Inventario',
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/inventario');
+              },
+            ),
+            _menuItem(
+              icon: Icons.add_box_outlined,
+              label: 'Registro de productos',
+              onTap: () async {
+                Navigator.pop(context);
+                await context.push('/agregar');
+                setState(() {});
+              },
+            ),
+            _menuItem(
+              icon: Icons.point_of_sale,
+              label: 'Registro de ventas',
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/ventas/registrar');
+              },
+            ),
+            _menuItem(
+              icon: Icons.bar_chart,
+              label: 'Reporte de ventas',
+              onTap: () => Navigator.pop(context),
+            ),
+            _menuItem(
+              icon: Icons.receipt_long,
+              label: 'Movimientos Kardex',
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/kardex-selector');
+              },
+            ),
+            const Divider(color: Colors.white10),
+            _menuItem(
+              icon: Icons.settings_outlined,
+              label: 'Configuración',
+              onTap: () async {
+                Navigator.pop(context);
+                await context.push('/configuracion');
+                _cargarPreferencias();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _menuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFF5AE6DF)),
+      title: Text(label, style: const TextStyle(color: Colors.white)),
+      onTap: onTap,
     );
   }
 

@@ -24,12 +24,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String _categoriaSeleccionada = 'Salado';
   List<String> _categorias = ['Salado', 'Dulce', 'Pastelería', 'Bebida', 'Otro'];
   bool _guardando = false;
+  String _nombreLocal = 'APP INVENTARIO';
 
   bool get _esEdicion => widget.producto != null;
 
   @override
   void initState() {
     super.initState();
+    _cargarPreferencias();
     _cargarCategorias();
     if (_esEdicion) {
       final p = widget.producto!;
@@ -39,6 +41,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
       _imagePath = p.imagePath;
       _categoriaSeleccionada = p.category;
     }
+  }
+
+  Future<void> _cargarPreferencias() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _nombreLocal = prefs.getString('nombre_negocio') ?? 'APP INVENTARIO';
+    });
   }
 
   Future<void> _cargarCategorias() async {
@@ -73,7 +82,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
             ),
             ListTile(
               leading:
-                  const Icon(Icons.photo_library, color: Color(0xFF5AE6DF)),
+              const Icon(Icons.photo_library, color: Color(0xFF5AE6DF)),
               title: const Text('Elegir de la galería',
                   style: TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(ctx, ImageSource.gallery),
@@ -95,9 +104,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     setState(() => _guardando = true);
 
-    // En edición, el stock NO se toca aquí: se administra desde el Kardex
-    // (botón "Kardex" en la tarjeta del producto) para que todo cambio de
-    // cantidad quede registrado como un movimiento con historial.
     final stockInicial = _esEdicion
         ? widget.producto!.stock
         : int.parse(_cantidadCtrl.text);
@@ -113,14 +119,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     final nuevoId = await DbHelper.instance.upsert(producto);
 
-    // HU-Kardex: si es un producto nuevo con stock inicial > 0, se registra
-    // automáticamente como un movimiento de ENTRADA ("Stock inicial"), para
-    // que el historial Kardex quede completo desde el primer momento.
     if (!_esEdicion && stockInicial > 0) {
       final productoCreado = Product(
         id: nuevoId,
         name: producto.name,
-        stock: 0, // arranca en 0 para que registrarMovimiento sume al stock
+        stock: 0,
         price: producto.price,
         category: producto.category,
         imagePath: producto.imagePath,
@@ -151,6 +154,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
+      drawer: _buildMenu(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -159,10 +163,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
         ),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.grey),
-          onPressed: () => context.pop(),
-        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.grey),
+            onPressed: () => context.pop(),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -184,7 +190,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 textCapitalization: TextCapitalization.sentences,
                 decoration: _inputDeco('Ej: Pan de sal, Croissant...', Icons.label_outline),
                 validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'El nombre es obligatorio' : null,
+                v == null || v.trim().isEmpty ? 'El nombre es obligatorio' : null,
               ),
 
               const SizedBox(height: 16),
@@ -257,9 +263,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 decoration: _inputDeco('', Icons.category_outlined),
                 items: _categorias
                     .map((c) => DropdownMenuItem(
-                          value: c,
-                          child: Text(c),
-                        ))
+                  value: c,
+                  child: Text(c),
+                ))
                     .toList(),
                 onChanged: (val) =>
                     setState(() => _categoriaSeleccionada = val!),
@@ -281,17 +287,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   ),
                   icon: _guardando
                       ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
                       : Icon(_esEdicion ? Icons.save : Icons.add_circle_outline),
                   label: Text(
                     _guardando
                         ? 'Guardando...'
                         : _esEdicion
-                            ? 'GUARDAR CAMBIOS'
-                            : 'REGISTRAR PRODUCTO',
+                        ? 'GUARDAR CAMBIOS'
+                        : 'REGISTRAR PRODUCTO',
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 15),
                   ),
@@ -316,6 +322,91 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
+  // ── MENÚ GENERAL ──────────────────────────────────────────
+  Widget _buildMenu() {
+    return Drawer(
+      backgroundColor: const Color(0xFF0A0A0A),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                _nombreLocal,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Divider(color: Colors.white10),
+            _menuItem(
+              icon: Icons.inventory_2_outlined,
+              label: 'Inventario',
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/inventario');
+              },
+            ),
+            _menuItem(
+              icon: Icons.add_box_outlined,
+              label: 'Registro de productos',
+              onTap: () => Navigator.pop(context),
+            ),
+            _menuItem(
+              icon: Icons.point_of_sale,
+              label: 'Registro de ventas',
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/ventas/registrar');
+              },
+            ),
+            _menuItem(
+              icon: Icons.bar_chart,
+              label: 'Reporte de ventas',
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/ventas/reporte');
+              },
+            ),
+            _menuItem(
+              icon: Icons.receipt_long,
+              label: 'Movimientos Kardex',
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/kardex-selector');
+              },
+            ),
+            const Divider(color: Colors.white10),
+            _menuItem(
+              icon: Icons.settings_outlined,
+              label: 'Configuración',
+              onTap: () async {
+                Navigator.pop(context);
+                await context.push('/configuracion');
+                _cargarPreferencias();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _menuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFF5AE6DF)),
+      title: Text(label, style: const TextStyle(color: Colors.white)),
+      onTap: onTap,
+    );
+  }
+
   // ── SELECTOR DE IMAGEN ────────────────────────────────────
   Widget _buildImagePicker() {
     return GestureDetector(
@@ -331,17 +422,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
         ),
         child: _imagePath == null
             ? const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_a_photo_outlined,
-                      color: Color(0xFF5AE6DF), size: 30),
-                  SizedBox(height: 4),
-                  Text('Foto',
-                      style: TextStyle(color: Colors.grey, fontSize: 11)),
-                ],
-              )
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_a_photo_outlined,
+                color: Color(0xFF5AE6DF), size: 30),
+            SizedBox(height: 4),
+            Text('Foto',
+                style: TextStyle(color: Colors.grey, fontSize: 11)),
+          ],
+        )
             : ClipOval(
-                child: Image.file(File(_imagePath!), fit: BoxFit.cover)),
+            child: Image.file(File(_imagePath!), fit: BoxFit.cover)),
       ),
     );
   }

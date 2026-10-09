@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:app_inventario/screens/home_screen.dart';
 import 'package:app_inventario/screens/inventario_screen.dart';
 import 'package:app_inventario/screens/add_product_screen.dart';
 import 'package:app_inventario/screens/settings_page.dart';
@@ -13,6 +14,11 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
+      name: 'home',
+      builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/inventario',
       name: 'inventario',
       builder: (context, state) => const InventarioScreen(),
     ),

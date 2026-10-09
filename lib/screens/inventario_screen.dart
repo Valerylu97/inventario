@@ -142,17 +142,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
           Expanded(child: _buildLista()),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await context.push('/agregar');
-          setState(() {});
-        },
-        backgroundColor: const Color(0xFFE67E22),
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('REGISTRAR',
-            style: TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
-      ),
     );
   }
 
